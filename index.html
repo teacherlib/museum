@@ -95,10 +95,10 @@
                 <span class="text-purple-400">ถึง</span>
                 <input type="date" id="endDate" class="rounded border-purple-300 p-1 text-sm outline-none">
                 <button onclick="filterData()" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700">กรองข้อมูล</button>
+                <button onclick="fetchData()" class="text-purple-600 px-3 py-1 text-sm hover:underline">แสดงทั้งหมด</button>
             </div>
             <button onclick="exportPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg shadow font-bold hover:bg-red-600 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-file-earmark-pdf" viewBox="0 0 16 16"><path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3V1H10v2h-2zM4.5 10.5A.5.5 0 0 1 5 10h3a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5z"/></svg>
-                พิมพ์ PDF
+                พิมพ์ PDF (ภาษาไทย)
             </button>
         </div>
 
@@ -106,7 +106,7 @@
             <table class="w-full text-left" id="reportTable">
                 <thead class="bg-purple-50 text-purple-800 border-b-2 border-purple-200">
                     <tr>
-                        <th class="p-3">วันที่/เวลา</th>
+                        <th class="p-3">วันที่/เวลา (พ.ศ.)</th>
                         <th class="p-3">คณะเยี่ยมชม</th>
                         <th class="p-3 text-center">จำนวน (คน)</th>
                         <th class="p-3">ชุดการต้อนรับ</th>
@@ -125,29 +125,22 @@
         const AUTH_PASS = 'library5413';
         let allData = [];
 
-        // ฟังก์ชันช่วยจัดการรูปแบบวันที่ พ.ศ.
+        // ฟังก์ชันแปลงวันที่เป็น พ.ศ. ให้ตรงตามฐานข้อมูล
         function formatThaiDate(dateStr) {
-            if (!dateStr) return '';
+            if (!dateStr) return "-";
             const date = new Date(dateStr);
-            if (isNaN(date)) return dateStr; // ถ้าแปลงไม่ได้ให้คืนค่าเดิม
+            if (isNaN(date.getTime())) return dateStr;
 
             const day = date.getDate().toString().padStart(2, '0');
             const month = (date.getMonth() + 1).toString().padStart(2, '0');
             const year = date.getFullYear() + 543;
             const hours = date.getHours().toString().padStart(2, '0');
             const minutes = date.getMinutes().toString().padStart(2, '0');
-            
+
             return `${day}/${month}/${year} ${hours}:${minutes}`;
         }
 
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.style.backgroundColor = type === 'success' ? '#10B981' : '#EF4444';
-            toast.className = "show";
-            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
-        }
-
+        // --- ระบบ Login ---
         function checkLogin() {
             const u = document.getElementById('userInput').value;
             const p = document.getElementById('passInput').value;
@@ -171,104 +164,120 @@
             }
         }
 
-        document.getElementById('museumForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const groupName = document.getElementById('groupName').value;
-            const visitorCount = document.getElementById('visitorCount').value;
-            const visitDateTime = document.getElementById('visitDateTime').value;
-            const packageType = document.getElementById('packageType').value;
-
-            if (!groupName || !visitorCount || !visitDateTime) {
-                showToast("กรอกข้อมูลไม่ครบ กรุณาตรวจสอบอีกครั้ง!", "error");
-                return;
-            }
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = 'กำลังส่งข้อมูล...';
-
-            try {
-                const payload = { groupName, visitorCount, visitDateTime, packageType };
-                const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                if (response.ok) {
-                    showToast("บันทึกข้อมูลเรียบร้อยแล้ว");
-                    document.getElementById('museumForm').reset();
-                    fetchData();
-                } else { throw new Error(); }
-            } catch (error) {
-                showToast("ไม่สามารถบันทึกได้ กรุณาลองใหม่ภายหลัง", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'บันทึกข้อมูล';
-            }
-        });
-
+        // --- จัดการข้อมูล ---
         async function fetchData() {
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
                 allData = data.slice(1);
                 renderTable(allData);
-            } catch (error) { console.error("Fetch Error"); }
+            } catch (error) { showToast("โหลดข้อมูลล้มเหลว", "error"); }
         }
 
         function renderTable(dataList) {
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
-            // เรียงลำดับจากใหม่ไปเก่า
+            
+            if(dataList.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-400">ไม่พบข้อมูล</td></tr>';
+                return;
+            }
+
             dataList.sort((a, b) => new Date(b[3]) - new Date(a[3])).forEach(row => {
                 const tr = document.createElement('tr');
-                // ใช้ formatThaiDate เพื่อแสดงวันที่ พ.ศ. ในตาราง
+                tr.className = "hover:bg-purple-50 transition-colors";
                 tr.innerHTML = `
                     <td class="p-3">${formatThaiDate(row[3])}</td>
                     <td class="p-3 font-bold text-purple-700">${row[1]}</td>
                     <td class="p-3 text-center">${row[2]}</td>
-                    <td class="p-3">${row[4]}</td>
+                    <td class="p-3 text-gray-600">${row[4]}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
 
+        // --- แก้ไขระบบกรองวันที่ให้ใช้งานได้จริง ---
         function filterData() {
-            const s = document.getElementById('startDate').value;
-            const e = document.getElementById('endDate').value;
-            if(!s || !e) return showToast("กรุณาเลือกช่วงวันที่ให้ครบ", "error");
-            const filtered = allData.filter(r => {
-                const d = new Date(r[3]).toISOString().split('T')[0];
-                return d >= s && d <= e;
+            const startVal = document.getElementById('startDate').value;
+            const endVal = document.getElementById('endDate').value;
+
+            if (!startVal || !endVal) {
+                showToast("กรุณาระบุวันที่เริ่มและสิ้นสุด", "error");
+                return;
+            }
+
+            const startDate = new Date(startVal).setHours(0, 0, 0, 0);
+            const endDate = new Date(endVal).setHours(23, 59, 59, 999);
+
+            const filtered = allData.filter(row => {
+                const rowDate = new Date(row[3]).getTime();
+                return rowDate >= startDate && rowDate <= endDate;
             });
+
             renderTable(filtered);
+            showToast(`พบข้อมูล ${filtered.length} รายการ`);
         }
 
-        // --- แก้ไขส่วน Export PDF ให้รองรับภาษาไทย ---
-        async function exportPDF() {
+        // --- ระบบพิมพ์ PDF ภาษาไทย ---
+        function exportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // หมายเหตุ: การใช้ภาษาไทยใน jsPDF ต้องใช้ฟอนต์ที่รองรับ (เช่น .ttf) 
-            // ในที่นี้จะตั้งค่าเบื้องต้นให้พยายามอ่านค่าจากตารางโดยใช้สไตล์ฟอนต์ที่รองรับ unicode
-            
-            doc.addFont("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/THSarabunNew/THSarabunNew.ttf", "THSarabun", "normal");
-            doc.setFont("THSarabun");
+            // ใช้ฟอนต์ Sarabun จากหน้าเว็บ และกำหนดค่า Unicode
+            doc.addFont("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/THSarabunNew/THSarabunNew.ttf", "ThaiFont", "normal");
+            doc.setFont("ThaiFont");
 
             doc.text("รายงานการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.", 14, 15);
+
+            const tableRows = [];
+            const rows = document.querySelectorAll("#tableBody tr");
             
-            doc.autoTable({ 
-                html: '#reportTable', 
-                startY: 20, 
-                theme: 'grid', 
-                headStyles: { fillColor: [107, 33, 168], font: 'Sarabun', fontStyle: 'bold' },
-                styles: {
-                    font: 'Sarabun', // ใช้ฟอนต์ในเครื่องที่รองรับภาษาไทย
-                    fontSize: 10
-                },
-                didParseCell: function(data) {
-                    // ตรวจสอบว่า cell เป็นส่วนของหัวตารางหรือไม่ เพื่อกำหนดฟอนต์
-                    data.cell.styles.font = 'Sarabun';
-                }
+            rows.forEach(row => {
+                const rowData = [];
+                row.querySelectorAll("td").forEach(cell => rowData.push(cell.innerText));
+                tableRows.push(rowData);
             });
 
-            doc.save('Visit_Report_Thai.pdf');
+            doc.autoTable({
+                head: [['วันที่/เวลา (พ.ศ.)', 'คณะเยี่ยมชม', 'จำนวน (คน)', 'ชุดการต้อนรับ']],
+                body: tableRows,
+                startY: 25,
+                styles: { font: 'ThaiFont', fontSize: 10 },
+                headStyles: { fillColor: [107, 33, 168] }
+            });
+
+            doc.save('Museum_Report.pdf');
+        }
+
+        // บันทึกฟอร์ม
+        document.getElementById('museumForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                groupName: document.getElementById('groupName').value,
+                visitorCount: document.getElementById('visitorCount').value,
+                visitDateTime: document.getElementById('visitDateTime').value,
+                packageType: document.getElementById('packageType').value
+            };
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = 'กำลังบันทึก...';
+
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                showToast("บันทึกสำเร็จ");
+                document.getElementById('museumForm').reset();
+                fetchData();
+            } catch (e) { showToast("เกิดข้อผิดพลาด", "error"); }
+            finally { btn.disabled = false; btn.innerText = 'บันทึกข้อมูล'; }
+        });
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.style.backgroundColor = type === 'success' ? '#10B981' : '#EF4444';
+            toast.className = "show";
+            setTimeout(() => { toast.className = ""; }, 3000);
         }
     </script>
 </body>
