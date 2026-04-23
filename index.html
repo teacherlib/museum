@@ -15,7 +15,6 @@
         .btn-purple:hover { background-color: #7e22ce; }
         #loginOverlay { backdrop-filter: blur(8px); }
         
-        /* สไตล์สำหรับการแจ้งเตือน */
         #toast {
             visibility: hidden;
             min-width: 300px;
@@ -56,7 +55,7 @@
         <div class="bg-purple-700 p-6 text-white flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold">บันทึกการเยี่ยมชมพิพิธภัณฑ์</h1>
-                <p class="text-sm opacity-80">โรงเรียนเตรีบมทหาร สถาบันวิชาการป้องกันประเทศ</p>
+                <p class="text-sm opacity-80">โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</p>
             </div>
             <button onclick="logout()" class="bg-purple-800 hover:bg-purple-900 px-4 py-1.5 rounded-full text-xs border border-purple-400 font-bold">ออกจากระบบ</button>
         </div>
@@ -126,7 +125,21 @@
         const AUTH_PASS = 'library5413';
         let allData = [];
 
-        // --- ระบบแจ้งเตือน (Toast) ---
+        // ฟังก์ชันช่วยจัดการรูปแบบวันที่ พ.ศ.
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            if (isNaN(date)) return dateStr; // ถ้าแปลงไม่ได้ให้คืนค่าเดิม
+
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear() + 543;
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
+
         function showToast(msg, type = 'success') {
             const toast = document.getElementById("toast");
             toast.innerText = msg;
@@ -135,7 +148,6 @@
             setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        // --- ระบบ Login ---
         function checkLogin() {
             const u = document.getElementById('userInput').value;
             const p = document.getElementById('passInput').value;
@@ -159,16 +171,13 @@
             }
         }
 
-        // --- บันทึกข้อมูล ---
         document.getElementById('museumForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const groupName = document.getElementById('groupName').value;
             const visitorCount = document.getElementById('visitorCount').value;
             const visitDateTime = document.getElementById('visitDateTime').value;
             const packageType = document.getElementById('packageType').value;
 
-            // ตรวจสอบข้อมูลว่าง
             if (!groupName || !visitorCount || !visitDateTime) {
                 showToast("กรอกข้อมูลไม่ครบ กรุณาตรวจสอบอีกครั้ง!", "error");
                 return;
@@ -181,14 +190,11 @@
             try {
                 const payload = { groupName, visitorCount, visitDateTime, packageType };
                 const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                
                 if (response.ok) {
                     showToast("บันทึกข้อมูลเรียบร้อยแล้ว");
                     document.getElementById('museumForm').reset();
                     fetchData();
-                } else {
-                    throw new Error();
-                }
+                } else { throw new Error(); }
             } catch (error) {
                 showToast("ไม่สามารถบันทึกได้ กรุณาลองใหม่ภายหลัง", "error");
             } finally {
@@ -197,24 +203,28 @@
             }
         });
 
-        // --- แสดงผลข้อมูล ---
         async function fetchData() {
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
                 allData = data.slice(1);
                 renderTable(allData);
-            } catch (error) { 
-                console.error("Fetch Error");
-            }
+            } catch (error) { console.error("Fetch Error"); }
         }
 
         function renderTable(dataList) {
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
+            // เรียงลำดับจากใหม่ไปเก่า
             dataList.sort((a, b) => new Date(b[3]) - new Date(a[3])).forEach(row => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="p-3">${row[3].replace('T', ' ')}</td><td class="p-3 font-bold text-purple-700">${row[1]}</td><td class="p-3 text-center">${row[2]}</td><td class="p-3">${row[4]}</td>`;
+                // ใช้ formatThaiDate เพื่อแสดงวันที่ พ.ศ. ในตาราง
+                tr.innerHTML = `
+                    <td class="p-3">${formatThaiDate(row[3])}</td>
+                    <td class="p-3 font-bold text-purple-700">${row[1]}</td>
+                    <td class="p-3 text-center">${row[2]}</td>
+                    <td class="p-3">${row[4]}</td>
+                `;
                 tableBody.appendChild(tr);
             });
         }
@@ -230,12 +240,35 @@
             renderTable(filtered);
         }
 
-        function exportPDF() {
+        // --- แก้ไขส่วน Export PDF ให้รองรับภาษาไทย ---
+        async function exportPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            doc.text("Museum Visit Report - AFAPS", 14, 15);
-            doc.autoTable({ html: '#reportTable', startY: 20, theme: 'grid', headStyles: {fillColor: [107, 33, 168]} });
-            doc.save('Visit_Report.pdf');
+            
+            // หมายเหตุ: การใช้ภาษาไทยใน jsPDF ต้องใช้ฟอนต์ที่รองรับ (เช่น .ttf) 
+            // ในที่นี้จะตั้งค่าเบื้องต้นให้พยายามอ่านค่าจากตารางโดยใช้สไตล์ฟอนต์ที่รองรับ unicode
+            
+            doc.addFont("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/THSarabunNew/THSarabunNew.ttf", "THSarabun", "normal");
+            doc.setFont("THSarabun");
+
+            doc.text("รายงานการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.", 14, 15);
+            
+            doc.autoTable({ 
+                html: '#reportTable', 
+                startY: 20, 
+                theme: 'grid', 
+                headStyles: { fillColor: [107, 33, 168], font: 'Sarabun', fontStyle: 'bold' },
+                styles: {
+                    font: 'Sarabun', // ใช้ฟอนต์ในเครื่องที่รองรับภาษาไทย
+                    fontSize: 10
+                },
+                didParseCell: function(data) {
+                    // ตรวจสอบว่า cell เป็นส่วนของหัวตารางหรือไม่ เพื่อกำหนดฟอนต์
+                    data.cell.styles.font = 'Sarabun';
+                }
+            });
+
+            doc.save('Visit_Report_Thai.pdf');
         }
     </script>
 </body>
