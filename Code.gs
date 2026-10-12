@@ -8,7 +8,7 @@
  * - Do not publish this backend code with real credentials in a public repository.
  */
 
-const SPREADSHEET_ID = '1ShJrfy912ab274U4EiDtXgIqXFkuZ4HbLui3181aguE';
+const SPREADSHEET_ID = '1_Zl3h5qsM6uitoqoS5TEF6OfyprIERS5jKkQ7UT5cEw';
 const SHEET_NAME = 'MuseumVisits';
 const DEFAULT_USER = 'library';
 const DEFAULT_PASS = 'library5413';
@@ -103,27 +103,23 @@ function requireToken_(token) {
 function getSheet_() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(HEADERS);
-    sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold').setBackground('#6b21a8').setFontColor('#ffffff');
-  } else {
-    // รองรับหัวตารางเดิมของผู้ใช้:
-    // A วันที่บันทึก, B คณะเยี่ยมชม, C จำนวน, D วันที่/เวลา (พ.ศ.), E ชุดการต้อนรับ
-    // ไม่เปลี่ยนหัวตารางเดิมและไม่ลบข้อมูล
-    const current = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 5)).getDisplayValues()[0]
-      .slice(0, 5).map(v => String(v || '').trim());
-    const knownEnglish = current[0] === HEADERS[0];
-    const knownThai = current[0] === 'วันที่บันทึก'
-      && current[1] === 'คณะเยี่ยมชม'
-      && current[2] === 'จำนวน'
-      && current[3].indexOf('วันที่/เวลา') === 0
-      && current[4] === 'ชุดการต้อนรับ';
-    if (!knownEnglish && !knownThai) {
-      throw new Error('ไม่รู้จักหัวตารางของแท็บ ' + SHEET_NAME + ': ' + current.join(' | '));
-    }
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
   }
+
+  // ใช้ตำแหน่งคอลัมน์ A-E ตามชีตเดิมของผู้ใช้
+  // ไม่ตรวจบังคับชื่อหัวตาราง เพื่อไม่ให้ข้อมูลเดิมถูกบล็อก
+  // และไม่เขียนทับ/เปลี่ยนหัวตารางที่มีอยู่แล้ว
+  if (sheet.getLastRow() === 0) {
+    const thaiHeaders = ['วันที่บันทึก', 'คณะเยี่ยมชม', 'จำนวน', 'วันที่/เวลา (พ.ศ.)', 'ชุดการต้อนรับ'];
+    sheet.appendRow(thaiHeaders);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, thaiHeaders.length)
+      .setFontWeight('bold')
+      .setBackground('#6b21a8')
+      .setFontColor('#ffffff');
+  }
+
   return sheet;
 }
 function listVisits_() {
