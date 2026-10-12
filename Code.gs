@@ -109,8 +109,20 @@ function getSheet_() {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold').setBackground('#6b21a8').setFontColor('#ffffff');
   } else {
-    const first = sheet.getRange(1, 1, 1, HEADERS.length).getDisplayValues()[0];
-    if (first[0] !== HEADERS[0]) throw new Error('หัวตารางชีตไม่ตรงกับระบบ กรุณาตรวจสอบแท็บ MuseumVisits');
+    // รองรับหัวตารางเดิมของผู้ใช้:
+    // A วันที่บันทึก, B คณะเยี่ยมชม, C จำนวน, D วันที่/เวลา (พ.ศ.), E ชุดการต้อนรับ
+    // ไม่เปลี่ยนหัวตารางเดิมและไม่ลบข้อมูล
+    const current = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 5)).getDisplayValues()[0]
+      .slice(0, 5).map(v => String(v || '').trim());
+    const knownEnglish = current[0] === HEADERS[0];
+    const knownThai = current[0] === 'วันที่บันทึก'
+      && current[1] === 'คณะเยี่ยมชม'
+      && current[2] === 'จำนวน'
+      && current[3].indexOf('วันที่/เวลา') === 0
+      && current[4] === 'ชุดการต้อนรับ';
+    if (!knownEnglish && !knownThai) {
+      throw new Error('ไม่รู้จักหัวตารางของแท็บ ' + SHEET_NAME + ': ' + current.join(' | '));
+    }
   }
   return sheet;
 }
