@@ -1,284 +1,234 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการพิพิธภัณฑ์ รร.ตท.สปท.</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8f0ff; }
-        .bg-lavender { background-color: #e9d5ff; }
-        .btn-purple { background-color: #9333ea; transition: 0.3s; }
-        .btn-purple:hover { background-color: #7e22ce; }
-        #loginOverlay { backdrop-filter: blur(8px); }
-        
-        #toast {
-            visibility: hidden;
-            min-width: 300px;
-            margin-left: -150px;
-            color: #fff;
-            text-align: center;
-            border-radius: 12px;
-            padding: 16px;
-            position: fixed;
-            z-index: 100;
-            left: 50%;
-            bottom: 30px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบบันทึกการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body{font-family:'Sarabun',sans-serif;background:#f8f0ff}
+    .btn-purple{background:#9333ea;transition:.2s}.btn-purple:hover{background:#7e22ce}
+    #toast{display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;padding:12px 20px;border-radius:12px;color:white;box-shadow:0 4px 15px #0003;max-width:90%;text-align:center}
+    #toast.show{display:block}
+    @media print{
+      body{background:white!important;padding:0!important}
+      #loginOverlay,#formSection,#filterSection,#logoutBtn,#toast,.no-print{display:none!important}
+      #mainContent{box-shadow:none!important;border:0!important;opacity:1!important;max-width:none!important}
+      #reportTable{font-size:10pt}
+      #reportTable th,#reportTable td{border:1px solid #ddd;padding:6px}
+      .print-title{display:block!important}
+    }
+    .print-title{display:none}
+  </style>
 </head>
 <body class="p-4">
+  <div id="toast" role="status" aria-live="polite"></div>
 
-    <div id="toast"></div>
+  <div id="loginOverlay" class="fixed inset-0 bg-purple-900/80 z-50 flex items-center justify-center p-4">
+    <form id="loginForm" class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-purple-600 text-center">
+      <h2 class="text-2xl font-bold text-gray-800 mb-4">เข้าสู่ระบบพิพิธภัณฑ์</h2>
+      <div class="space-y-4">
+        <input type="text" id="userInput" autocomplete="username" required placeholder="ชื่อผู้ใช้" class="w-full border border-purple-200 rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500">
+        <input type="password" id="passInput" autocomplete="current-password" required placeholder="รหัสผ่าน" class="w-full border border-purple-200 rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500">
+        <button id="loginBtn" class="w-full btn-purple text-white py-3 rounded-lg font-bold shadow-lg">ยืนยันตัวตน</button>
+        <p id="loginError" class="text-red-500 text-sm hidden"></p>
+      </div>
+    </form>
+  </div>
 
-    <div id="loginOverlay" class="fixed inset-0 bg-purple-900/80 z-50 flex items-center justify-center p-4">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-purple-600 text-center">
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">เข้าสู่ระบบพิพิธภัณฑ์</h2>
-            <div class="space-y-4">
-                <input type="text" id="userInput" placeholder="Username" class="w-full border border-purple-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-purple-500">
-                <input type="password" id="passInput" placeholder="Password" class="w-full border border-purple-200 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-purple-500">
-                <button onclick="checkLogin()" class="w-full btn-purple text-white py-3 rounded-lg font-bold shadow-lg">ยืนยันตัวตน</button>
-                <p id="loginError" class="text-red-500 text-xs hidden">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง!</p>
-            </div>
+  <main id="mainContent" class="hidden max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-purple-200">
+    <header class="bg-purple-700 p-6 text-white flex justify-between items-center gap-3">
+      <div><h1 class="text-2xl font-bold">บันทึกการเยี่ยมชมพิพิธภัณฑ์</h1><p class="text-sm opacity-90">โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</p></div>
+      <button id="logoutBtn" type="button" class="bg-purple-800 hover:bg-purple-900 px-4 py-2 rounded-full text-xs border border-purple-400 font-bold">ออกจากระบบ</button>
+    </header>
+
+    <section id="formSection" class="p-6 border-b border-purple-100">
+      <form id="museumForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="md:col-span-2">
+          <label for="groupName" class="text-purple-800 font-bold text-sm">ชื่อคณะเยี่ยมชม <span class="text-red-500">*</span></label>
+          <input type="text" id="groupName" required maxlength="200" class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
         </div>
-    </div>
-
-    <div id="mainContent" class="max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-purple-200 opacity-0 transition-opacity duration-500">
-        <div class="bg-purple-700 p-6 text-white flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold">บันทึกการเยี่ยมชมพิพิธภัณฑ์</h1>
-                <p class="text-sm opacity-80">โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</p>
-            </div>
-            <button onclick="logout()" class="bg-purple-800 hover:bg-purple-900 px-4 py-1.5 rounded-full text-xs border border-purple-400 font-bold">ออกจากระบบ</button>
+        <div>
+          <label for="visitorCount" class="text-purple-800 font-bold text-sm">จำนวนผู้เยี่ยมชม (คน) <span class="text-red-500">*</span></label>
+          <input type="number" id="visitorCount" required min="1" step="1" class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
         </div>
-
-        <div class="p-6 border-b border-purple-100">
-            <form id="museumForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="md:col-span-2">
-                    <label class="text-purple-800 font-bold text-sm">ชื่อคณะเยี่ยมชม <span class="text-red-500">*</span></label>
-                    <input type="text" id="groupName" class="w-full border border-purple-200 rounded p-2 focus:ring-2 focus:ring-purple-400 outline-none">
-                </div>
-                <div>
-                    <label class="text-purple-800 font-bold text-sm">จำนวนผู้เยี่ยมชม <span class="text-red-500">*</span></label>
-                    <input type="number" id="visitorCount" class="w-full border border-purple-200 rounded p-2 focus:ring-2 focus:ring-purple-400 outline-none">
-                </div>
-                <div>
-                    <label class="text-purple-800 font-bold text-sm">วันที่และเวลา <span class="text-red-500">*</span></label>
-                    <input type="datetime-local" id="visitDateTime" class="w-full border border-purple-200 rounded p-2 focus:ring-2 focus:ring-purple-400 outline-none">
-                </div>
-                <div class="md:col-span-3">
-                    <label class="text-purple-800 font-bold text-sm">ชุดการต้อนรับคณะ</label>
-                    <select id="packageType" class="w-full border border-purple-200 rounded p-2 focus:ring-2 focus:ring-purple-400 outline-none">
-                        <option>ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)</option>
-                        <option>ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)</option>
-                        <option>ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button type="submit" id="submitBtn" class="w-full btn-purple text-white p-2.5 rounded-lg font-bold shadow-md">บันทึกข้อมูล</button>
-                </div>
-            </form>
+        <div>
+          <label for="visitDateTime" class="text-purple-800 font-bold text-sm">วันที่และเวลา <span class="text-red-500">*</span></label>
+          <input type="datetime-local" id="visitDateTime" required class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
         </div>
-
-        <div class="bg-lavender p-4 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-purple-100">
-            <div class="flex flex-wrap items-center gap-2">
-                <span class="text-purple-900 font-bold">ช่วงเวลา:</span>
-                <input type="date" id="startDate" class="rounded border-purple-300 p-1 text-sm outline-none">
-                <span class="text-purple-400">ถึง</span>
-                <input type="date" id="endDate" class="rounded border-purple-300 p-1 text-sm outline-none">
-                <button onclick="filterData()" class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700">กรองข้อมูล</button>
-                <button onclick="fetchData()" class="text-purple-600 px-3 py-1 text-sm hover:underline">แสดงทั้งหมด</button>
-            </div>
-            <button onclick="exportPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg shadow font-bold hover:bg-red-600 flex items-center gap-2">
-                พิมพ์ PDF (ภาษาไทย)
-            </button>
+        <div class="md:col-span-3">
+          <label for="packageType" class="text-purple-800 font-bold text-sm">ชุดการต้อนรับคณะ <span class="text-red-500">*</span></label>
+          <select id="packageType" required class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
+            <option value="ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)">ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)</option>
+            <option value="ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)">ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)</option>
+            <option value="ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)">ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)</option>
+          </select>
         </div>
+        <div class="flex items-end"><button id="submitBtn" type="submit" class="w-full btn-purple text-white p-2.5 rounded-lg font-bold shadow-md">บันทึกข้อมูล</button></div>
+      </form>
+    </section>
 
-        <div class="p-4 overflow-x-auto min-h-[300px]">
-            <table class="w-full text-left" id="reportTable">
-                <thead class="bg-purple-50 text-purple-800 border-b-2 border-purple-200">
-                    <tr>
-                        <th class="p-3">วันที่/เวลา (พ.ศ.)</th>
-                        <th class="p-3">คณะเยี่ยมชม</th>
-                        <th class="p-3 text-center">จำนวน (คน)</th>
-                        <th class="p-3">ชุดการต้อนรับ</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody" class="divide-y divide-purple-50 text-sm">
-                    <tr><td colspan="4" class="text-center py-10 text-gray-400 italic">กรุณารอข้อมูลสักครู่...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <section id="filterSection" class="bg-purple-100 p-4 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-purple-100">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-purple-900 font-bold">ช่วงเวลา:</span>
+        <input type="date" id="startDate" aria-label="วันที่เริ่มต้น" class="rounded border-purple-300 p-2 text-sm">
+        <span class="text-purple-500">ถึง</span>
+        <input type="date" id="endDate" aria-label="วันที่สิ้นสุด" class="rounded border-purple-300 p-2 text-sm">
+        <button id="filterBtn" type="button" class="bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">กรองข้อมูล</button>
+        <button id="allBtn" type="button" class="text-purple-700 px-3 py-2 text-sm hover:underline">แสดงทั้งหมด</button>
+      </div>
+      <button id="printBtn" type="button" class="bg-red-500 text-white px-4 py-2 rounded-lg shadow font-bold hover:bg-red-600">พิมพ์ / บันทึก PDF</button>
+    </section>
 
-    <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfOkJt3nCDpBR128Icd1ZI7vvAgnaKJfY24Nj-FhcM1jv3pP2d1zm9nUFtWB2xT_qq/exec';
-        const AUTH_USER = 'library';
-        const AUTH_PASS = 'library5413';
-        let allData = [];
+    <section class="p-4 overflow-x-auto min-h-[250px]">
+      <h2 class="print-title text-center text-xl font-bold mb-4">รายงานการเยี่ยมชมพิพิธภัณฑ์ โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</h2>
+      <div class="flex justify-between text-sm text-gray-500 mb-2"><span id="recordCount">0 รายการ</span><span id="loadingText"></span></div>
+      <table class="w-full text-left" id="reportTable">
+        <thead class="bg-purple-50 text-purple-800 border-b-2 border-purple-200"><tr>
+          <th class="p-3">วันที่/เวลา (พ.ศ.)</th><th class="p-3">คณะเยี่ยมชม</th><th class="p-3 text-center">จำนวน (คน)</th><th class="p-3">ชุดการต้อนรับ</th>
+        </tr></thead>
+        <tbody id="tableBody" class="divide-y divide-purple-50 text-sm"><tr><td colspan="4" class="text-center py-10 text-gray-400">กรุณาเข้าสู่ระบบ</td></tr></tbody>
+      </table>
+    </section>
+  </main>
 
-        // ฟังก์ชันแปลงวันที่เป็น พ.ศ. ให้ตรงตามฐานข้อมูล
-        function formatThaiDate(dateStr) {
-            if (!dateStr) return "-";
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return dateStr;
+<script>
+  let authToken = sessionStorage.getItem('museumToken') || '';
+  let allData = [];
+  let visibleData = [];
 
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const year = date.getFullYear() + 543;
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
+  const $ = id => document.getElementById(id);
 
-            return `${day}/${month}/${year} ${hours}:${minutes}`;
-        }
+  function toast(message, type='success') {
+    const el = $('toast'); el.textContent = message;
+    el.style.background = type === 'success' ? '#059669' : '#dc2626';
+    el.classList.add('show'); clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => el.classList.remove('show'), 3500);
+  }
+  function setBusy(button, busy, label) {
+    button.disabled = busy; button.textContent = busy ? label : button.dataset.original;
+    button.classList.toggle('opacity-60', busy); button.classList.toggle('cursor-not-allowed', busy);
+  }
+  function callServer(method, ...args) {
+    return new Promise((resolve, reject) => {
+      if (!google || !google.script || !google.script.run) {
+        reject(new Error('กรุณาเปิดระบบผ่าน URL ของ Google Apps Script Web App'));
+        return;
+      }
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(new Error(err.message || String(err))))[method](...args);
+    });
+  }
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function parseDate(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  function formatThaiDate(value) {
+    const d = parseDate(value); if (!d) return value || '-';
+    return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false
+    }).format(d);
+  }
+  function showApp() {
+    $('loginOverlay').classList.add('hidden');
+    $('mainContent').classList.remove('hidden');
+  }
+  async function login(event) {
+    event.preventDefault();
+    const btn = $('loginBtn'); btn.dataset.original = 'ยืนยันตัวตน';
+    setBusy(btn, true, 'กำลังตรวจสอบ...');
+    $('loginError').classList.add('hidden');
+    try {
+      const result = await callServer('checkLogin', $('userInput').value.trim(), $('passInput').value);
+      if (!result || !result.success) throw new Error(result?.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+      authToken = result.token; sessionStorage.setItem('museumToken', authToken);
+      showApp(); await fetchData(); $('passInput').value = '';
+    } catch (err) {
+      $('loginError').textContent = err.message || 'เข้าสู่ระบบไม่สำเร็จ';
+      $('loginError').classList.remove('hidden');
+    } finally { setBusy(btn, false, ''); }
+  }
+  async function fetchData() {
+    $('loadingText').textContent = 'กำลังโหลดข้อมูล...';
+    try {
+      allData = await callServer('getVisits', authToken);
+      visibleData = [...allData]; renderTable(visibleData);
+    } catch (err) {
+      if ((err.message || '').includes('เซสชันหมดอายุ')) logout(false);
+      toast(err.message || 'โหลดข้อมูลไม่สำเร็จ', 'error');
+    } finally { $('loadingText').textContent = ''; }
+  }
+  function renderTable(rows) {
+    const tbody = $('tableBody'); tbody.replaceChildren();
+    $('recordCount').textContent = `${rows.length} รายการ`;
+    if (!rows.length) {
+      const tr = document.createElement('tr'); const td = document.createElement('td');
+      td.colSpan = 4; td.className = 'text-center py-10 text-gray-400'; td.textContent = 'ไม่พบข้อมูล';
+      tr.appendChild(td); tbody.appendChild(tr); return;
+    }
+    rows.forEach(row => {
+      const tr = document.createElement('tr'); tr.className = 'hover:bg-purple-50';
+      [formatThaiDate(row.visitDateTime), row.groupName, row.visitorCount, row.packageType].forEach((value, index) => {
+        const td = document.createElement('td'); td.className = 'p-3';
+        if (index === 2) td.classList.add('text-center');
+        if (index === 1) td.classList.add('font-bold','text-purple-700');
+        td.textContent = value ?? '-'; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+  function filterData() {
+    const start = $('startDate').value, end = $('endDate').value;
+    if (!start || !end) return toast('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด', 'error');
+    if (start > end) return toast('วันที่เริ่มต้นต้องไม่อยู่หลังวันที่สิ้นสุด', 'error');
+    visibleData = allData.filter(row => {
+      const d = parseDate(row.visitDateTime); if (!d) return false;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return key >= start && key <= end;
+    });
+    renderTable(visibleData);
+  }
+  async function saveForm(event) {
+    event.preventDefault();
+    const btn = $('submitBtn'); btn.dataset.original = 'บันทึกข้อมูล';
+    setBusy(btn, true, 'กำลังบันทึก...');
+    const payload = {
+      groupName: $('groupName').value.trim(),
+      visitorCount: $('visitorCount').value,
+      visitDateTime: $('visitDateTime').value,
+      packageType: $('packageType').value
+    };
+    try {
+      const result = await callServer('saveVisit', authToken, payload);
+      $('museumForm').reset(); toast(result.message || 'บันทึกข้อมูลสำเร็จ');
+      await fetchData();
+    } catch (err) { toast(err.message || 'บันทึกข้อมูลไม่สำเร็จ', 'error'); }
+    finally { setBusy(btn, false, ''); }
+  }
+  function logout(reload=true) {
+    authToken = ''; sessionStorage.removeItem('museumToken');
+    $('mainContent').classList.add('hidden'); $('loginOverlay').classList.remove('hidden');
+    if (reload) $('passInput').value = '';
+  }
 
-        // --- ระบบ Login ---
-        function checkLogin() {
-            const u = document.getElementById('userInput').value;
-            const p = document.getElementById('passInput').value;
-            if (u === AUTH_USER && p === AUTH_PASS) {
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('opacity-0');
-                sessionStorage.setItem('isLoggedIn', 'true');
-                fetchData();
-            } else {
-                document.getElementById('loginError').classList.remove('hidden');
-            }
-        }
+  $('loginForm').addEventListener('submit', login);
+  $('museumForm').addEventListener('submit', saveForm);
+  $('filterBtn').addEventListener('click', filterData);
+  $('allBtn').addEventListener('click', () => { visibleData = [...allData]; renderTable(visibleData); });
+  $('printBtn').addEventListener('click', () => window.print());
+  $('logoutBtn').addEventListener('click', () => logout());
 
-        function logout() { sessionStorage.removeItem('isLoggedIn'); location.reload(); }
-
-        window.onload = () => {
-            if (sessionStorage.getItem('isLoggedIn') === 'true') {
-                document.getElementById('loginOverlay').classList.add('hidden');
-                document.getElementById('mainContent').classList.remove('opacity-0');
-                fetchData();
-            }
-        }
-
-        // --- จัดการข้อมูล ---
-        async function fetchData() {
-            try {
-                const response = await fetch(SCRIPT_URL);
-                const data = await response.json();
-                allData = data.slice(1);
-                renderTable(allData);
-            } catch (error) { showToast("โหลดข้อมูลล้มเหลว", "error"); }
-        }
-
-        function renderTable(dataList) {
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            
-            if(dataList.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-400">ไม่พบข้อมูล</td></tr>';
-                return;
-            }
-
-            dataList.sort((a, b) => new Date(b[3]) - new Date(a[3])).forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-purple-50 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-3">${formatThaiDate(row[3])}</td>
-                    <td class="p-3 font-bold text-purple-700">${row[1]}</td>
-                    <td class="p-3 text-center">${row[2]}</td>
-                    <td class="p-3 text-gray-600">${row[4]}</td>
-                `;
-                tableBody.appendChild(tr);
-            });
-        }
-
-        // --- แก้ไขระบบกรองวันที่ให้ใช้งานได้จริง ---
-        function filterData() {
-            const startVal = document.getElementById('startDate').value;
-            const endVal = document.getElementById('endDate').value;
-
-            if (!startVal || !endVal) {
-                showToast("กรุณาระบุวันที่เริ่มและสิ้นสุด", "error");
-                return;
-            }
-
-            const startDate = new Date(startVal).setHours(0, 0, 0, 0);
-            const endDate = new Date(endVal).setHours(23, 59, 59, 999);
-
-            const filtered = allData.filter(row => {
-                const rowDate = new Date(row[3]).getTime();
-                return rowDate >= startDate && rowDate <= endDate;
-            });
-
-            renderTable(filtered);
-            showToast(`พบข้อมูล ${filtered.length} รายการ`);
-        }
-
-        // --- ระบบพิมพ์ PDF ภาษาไทย ---
-        function exportPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // ใช้ฟอนต์ Sarabun จากหน้าเว็บ และกำหนดค่า Unicode
-            doc.addFont("https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/THSarabunNew/THSarabunNew.ttf", "ThaiFont", "normal");
-            doc.setFont("ThaiFont");
-
-            doc.text("รายงานการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.", 14, 15);
-
-            const tableRows = [];
-            const rows = document.querySelectorAll("#tableBody tr");
-            
-            rows.forEach(row => {
-                const rowData = [];
-                row.querySelectorAll("td").forEach(cell => rowData.push(cell.innerText));
-                tableRows.push(rowData);
-            });
-
-            doc.autoTable({
-                head: [['วันที่/เวลา (พ.ศ.)', 'คณะเยี่ยมชม', 'จำนวน (คน)', 'ชุดการต้อนรับ']],
-                body: tableRows,
-                startY: 25,
-                styles: { font: 'ThaiFont', fontSize: 10 },
-                headStyles: { fillColor: [107, 33, 168] }
-            });
-
-            doc.save('Museum_Report.pdf');
-        }
-
-        // บันทึกฟอร์ม
-        document.getElementById('museumForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = {
-                groupName: document.getElementById('groupName').value,
-                visitorCount: document.getElementById('visitorCount').value,
-                visitDateTime: document.getElementById('visitDateTime').value,
-                packageType: document.getElementById('packageType').value
-            };
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = 'กำลังบันทึก...';
-
-            try {
-                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                showToast("บันทึกสำเร็จ");
-                document.getElementById('museumForm').reset();
-                fetchData();
-            } catch (e) { showToast("เกิดข้อผิดพลาด", "error"); }
-            finally { btn.disabled = false; btn.innerText = 'บันทึกข้อมูล'; }
-        });
-
-        function showToast(msg, type = 'success') {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.style.backgroundColor = type === 'success' ? '#10B981' : '#EF4444';
-            toast.className = "show";
-            setTimeout(() => { toast.className = ""; }, 3000);
-        }
-    </script>
+  window.addEventListener('load', async () => {
+    if (authToken) {
+      showApp();
+      await fetchData();
+      if (!authToken) return;
+    }
+  });
+</script>
 </body>
 </html>
