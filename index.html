@@ -1,234 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ระบบบันทึกการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body{font-family:'Sarabun',sans-serif;background:#f8f0ff}
-    .btn-purple{background:#9333ea;transition:.2s}.btn-purple:hover{background:#7e22ce}
-    #toast{display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;padding:12px 20px;border-radius:12px;color:white;box-shadow:0 4px 15px #0003;max-width:90%;text-align:center}
-    #toast.show{display:block}
-    @media print{
-      body{background:white!important;padding:0!important}
-      #loginOverlay,#formSection,#filterSection,#logoutBtn,#toast,.no-print{display:none!important}
-      #mainContent{box-shadow:none!important;border:0!important;opacity:1!important;max-width:none!important}
-      #reportTable{font-size:10pt}
-      #reportTable th,#reportTable td{border:1px solid #ddd;padding:6px}
-      .print-title{display:block!important}
-    }
-    .print-title{display:none}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ระบบบันทึกการเยี่ยมชมพิพิธภัณฑ์ รร.ตท.สปท.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+body{font-family:Sarabun,sans-serif;background:#f8f0ff}
+.btn{background:#9333ea;color:#fff}.btn:hover{background:#7e22ce}
+#toast{display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;padding:12px 20px;border-radius:12px;color:#fff;max-width:92%;text-align:center}
+#toast.show{display:block}
+@media print{body{background:white;padding:0}#login,#formSection,#filterSection,.no-print,#toast{display:none!important}#app{display:block!important;box-shadow:none;border:0;max-width:none}.print-title{display:block!important}table,th,td{border:1px solid #ccc;border-collapse:collapse}.print-title{text-align:center}}
+.print-title{display:none}
+</style>
 </head>
 <body class="p-4">
-  <div id="toast" role="status" aria-live="polite"></div>
+<div id="toast" role="status"></div>
 
-  <div id="loginOverlay" class="fixed inset-0 bg-purple-900/80 z-50 flex items-center justify-center p-4">
-    <form id="loginForm" class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-8 border-purple-600 text-center">
-      <h2 class="text-2xl font-bold text-gray-800 mb-4">เข้าสู่ระบบพิพิธภัณฑ์</h2>
-      <div class="space-y-4">
-        <input type="text" id="userInput" autocomplete="username" required placeholder="ชื่อผู้ใช้" class="w-full border border-purple-200 rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500">
-        <input type="password" id="passInput" autocomplete="current-password" required placeholder="รหัสผ่าน" class="w-full border border-purple-200 rounded-lg p-3 outline-none focus:ring-2 focus:ring-purple-500">
-        <button id="loginBtn" class="w-full btn-purple text-white py-3 rounded-lg font-bold shadow-lg">ยืนยันตัวตน</button>
-        <p id="loginError" class="text-red-500 text-sm hidden"></p>
-      </div>
-    </form>
-  </div>
+<section id="login" class="fixed inset-0 z-50 flex items-center justify-center bg-purple-900/80 p-4">
+<form id="loginForm" class="w-full max-w-md rounded-2xl border-t-8 border-purple-600 bg-white p-8 text-center shadow-2xl">
+<h1 class="mb-5 text-2xl font-bold">เข้าสู่ระบบพิพิธภัณฑ์</h1>
+<input id="username" class="mb-3 w-full rounded border p-3" placeholder="ชื่อผู้ใช้" autocomplete="username" required>
+<input id="password" type="password" class="mb-4 w-full rounded border p-3" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+<button id="loginBtn" class="btn w-full rounded-lg p-3 font-bold">ยืนยันตัวตน</button>
+<p id="loginError" class="mt-3 hidden text-sm text-red-600"></p>
+</form>
+</section>
 
-  <main id="mainContent" class="hidden max-w-5xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-purple-200">
-    <header class="bg-purple-700 p-6 text-white flex justify-between items-center gap-3">
-      <div><h1 class="text-2xl font-bold">บันทึกการเยี่ยมชมพิพิธภัณฑ์</h1><p class="text-sm opacity-90">โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</p></div>
-      <button id="logoutBtn" type="button" class="bg-purple-800 hover:bg-purple-900 px-4 py-2 rounded-full text-xs border border-purple-400 font-bold">ออกจากระบบ</button>
-    </header>
+<main id="app" class="mx-auto hidden max-w-5xl overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-2xl">
+<header class="flex items-center justify-between gap-3 bg-purple-700 p-6 text-white">
+<div><h1 class="text-2xl font-bold">บันทึกการเยี่ยมชมพิพิธภัณฑ์</h1><p class="text-sm">โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</p></div>
+<button id="logoutBtn" class="rounded-full border border-purple-300 bg-purple-800 px-4 py-2 text-xs font-bold">ออกจากระบบ</button>
+</header>
 
-    <section id="formSection" class="p-6 border-b border-purple-100">
-      <form id="museumForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="md:col-span-2">
-          <label for="groupName" class="text-purple-800 font-bold text-sm">ชื่อคณะเยี่ยมชม <span class="text-red-500">*</span></label>
-          <input type="text" id="groupName" required maxlength="200" class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
-        </div>
-        <div>
-          <label for="visitorCount" class="text-purple-800 font-bold text-sm">จำนวนผู้เยี่ยมชม (คน) <span class="text-red-500">*</span></label>
-          <input type="number" id="visitorCount" required min="1" step="1" class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
-        </div>
-        <div>
-          <label for="visitDateTime" class="text-purple-800 font-bold text-sm">วันที่และเวลา <span class="text-red-500">*</span></label>
-          <input type="datetime-local" id="visitDateTime" required class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
-        </div>
-        <div class="md:col-span-3">
-          <label for="packageType" class="text-purple-800 font-bold text-sm">ชุดการต้อนรับคณะ <span class="text-red-500">*</span></label>
-          <select id="packageType" required class="w-full border border-purple-200 rounded p-2.5 focus:ring-2 focus:ring-purple-400 outline-none">
-            <option value="ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)">ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)</option>
-            <option value="ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)">ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)</option>
-            <option value="ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)">ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)</option>
-          </select>
-        </div>
-        <div class="flex items-end"><button id="submitBtn" type="submit" class="w-full btn-purple text-white p-2.5 rounded-lg font-bold shadow-md">บันทึกข้อมูล</button></div>
-      </form>
-    </section>
+<section id="formSection" class="border-b border-purple-100 p-6">
+<form id="visitForm" class="grid grid-cols-1 gap-4 md:grid-cols-4">
+<div class="md:col-span-2"><label class="text-sm font-bold text-purple-800" for="groupName">ชื่อคณะเยี่ยมชม *</label><input id="groupName" maxlength="200" required class="w-full rounded border p-2.5"></div>
+<div><label class="text-sm font-bold text-purple-800" for="visitorCount">จำนวนผู้เยี่ยมชม *</label><input id="visitorCount" type="number" min="1" step="1" required class="w-full rounded border p-2.5"></div>
+<div><label class="text-sm font-bold text-purple-800" for="visitDateTime">วันที่และเวลา *</label><input id="visitDateTime" type="datetime-local" required class="w-full rounded border p-2.5"></div>
+<div class="md:col-span-3"><label class="text-sm font-bold text-purple-800" for="packageType">ชุดการต้อนรับคณะ</label>
+<select id="packageType" class="w-full rounded border p-2.5">
+<option>ชุดที่ 1: พ.ท.หญิง อภิวรรณฯ (หน.ชุด)</option>
+<option>ชุดที่ 2: พ.ท.หญิง รุ่งนภาฯ (หน.ชุด)</option>
+<option>ชุดที่ 3: ร.ท.ธนากรฯ (หน.ชุด)</option>
+</select></div>
+<div class="flex items-end"><button id="saveBtn" class="btn w-full rounded-lg p-2.5 font-bold">บันทึกข้อมูล</button></div>
+</form>
+</section>
 
-    <section id="filterSection" class="bg-purple-100 p-4 flex flex-col md:flex-row justify-between items-center gap-4 border-t border-purple-100">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="text-purple-900 font-bold">ช่วงเวลา:</span>
-        <input type="date" id="startDate" aria-label="วันที่เริ่มต้น" class="rounded border-purple-300 p-2 text-sm">
-        <span class="text-purple-500">ถึง</span>
-        <input type="date" id="endDate" aria-label="วันที่สิ้นสุด" class="rounded border-purple-300 p-2 text-sm">
-        <button id="filterBtn" type="button" class="bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">กรองข้อมูล</button>
-        <button id="allBtn" type="button" class="text-purple-700 px-3 py-2 text-sm hover:underline">แสดงทั้งหมด</button>
-      </div>
-      <button id="printBtn" type="button" class="bg-red-500 text-white px-4 py-2 rounded-lg shadow font-bold hover:bg-red-600">พิมพ์ / บันทึก PDF</button>
-    </section>
+<section id="filterSection" class="flex flex-col items-center justify-between gap-3 bg-purple-100 p-4 md:flex-row">
+<div class="flex flex-wrap items-center gap-2"><b class="text-purple-900">ช่วงเวลา:</b>
+<input type="date" id="startDate" class="rounded border p-2 text-sm"><span>ถึง</span><input type="date" id="endDate" class="rounded border p-2 text-sm">
+<button id="filterBtn" class="rounded bg-purple-600 px-3 py-2 text-sm text-white">กรองข้อมูล</button><button id="allBtn" class="px-3 py-2 text-sm text-purple-800">แสดงทั้งหมด</button></div>
+<button id="printBtn" class="rounded bg-red-500 px-4 py-2 font-bold text-white">พิมพ์ / บันทึก PDF</button>
+</section>
 
-    <section class="p-4 overflow-x-auto min-h-[250px]">
-      <h2 class="print-title text-center text-xl font-bold mb-4">รายงานการเยี่ยมชมพิพิธภัณฑ์ โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</h2>
-      <div class="flex justify-between text-sm text-gray-500 mb-2"><span id="recordCount">0 รายการ</span><span id="loadingText"></span></div>
-      <table class="w-full text-left" id="reportTable">
-        <thead class="bg-purple-50 text-purple-800 border-b-2 border-purple-200"><tr>
-          <th class="p-3">วันที่/เวลา (พ.ศ.)</th><th class="p-3">คณะเยี่ยมชม</th><th class="p-3 text-center">จำนวน (คน)</th><th class="p-3">ชุดการต้อนรับ</th>
-        </tr></thead>
-        <tbody id="tableBody" class="divide-y divide-purple-50 text-sm"><tr><td colspan="4" class="text-center py-10 text-gray-400">กรุณาเข้าสู่ระบบ</td></tr></tbody>
-      </table>
-    </section>
-  </main>
+<section class="min-h-64 overflow-x-auto p-4">
+<h2 class="print-title mb-4 text-xl font-bold">รายงานการเยี่ยมชมพิพิธภัณฑ์ โรงเรียนเตรียมทหาร สถาบันวิชาการป้องกันประเทศ</h2>
+<div class="mb-2 flex justify-between text-sm text-gray-500"><span id="count">0 รายการ</span><span id="loading"></span></div>
+<table class="w-full text-left" id="reportTable"><thead class="border-b-2 border-purple-200 bg-purple-50 text-purple-800"><tr><th class="p-3">วันที่/เวลา (พ.ศ.)</th><th class="p-3">คณะเยี่ยมชม</th><th class="p-3 text-center">จำนวน (คน)</th><th class="p-3">ชุดการต้อนรับ</th></tr></thead>
+<tbody id="rows" class="divide-y divide-purple-50 text-sm"><tr><td colspan="4" class="py-8 text-center text-gray-400">กรุณาเข้าสู่ระบบ</td></tr></tbody></table>
+</section>
+</main>
 
 <script>
-  let authToken = sessionStorage.getItem('museumToken') || '';
-  let allData = [];
-  let visibleData = [];
+/* ใส่ URL Web App ของ Apps Script ที่ลงท้ายด้วย /exec */
+const API_URL = 'https://script.google.com/macros/s/AKfycbxFgG8fMKTlO8Kyx5lU7jQUaT3Bk1kYBzGaDPgIVqModIq0BEJ_Oon-u6JqOKAMnNdZjg/exec';
+let token = sessionStorage.getItem('museumToken') || '';
+let allRows = [], shownRows = [];
+const $ = id => document.getElementById(id);
 
-  const $ = id => document.getElementById(id);
-
-  function toast(message, type='success') {
-    const el = $('toast'); el.textContent = message;
-    el.style.background = type === 'success' ? '#059669' : '#dc2626';
-    el.classList.add('show'); clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => el.classList.remove('show'), 3500);
+function notify(msg, error=false){const t=$('toast');t.textContent=msg;t.style.background=error?'#dc2626':'#059669';t.classList.add('show');clearTimeout(notify.timer);notify.timer=setTimeout(()=>t.classList.remove('show'),3500)}
+function ensureApi(){if(!API_URL.startsWith('https://script.google.com/macros/s/')||!API_URL.endsWith('/exec'))throw new Error('กรุณาตั้งค่า API_URL ในไฟล์ index.html ให้เป็น URL Web App ที่ลงท้ายด้วย /exec')}
+function jsonp(params){
+ return new Promise((resolve,reject)=>{
+  const cb='museumCb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  const script=document.createElement('script');const timer=setTimeout(()=>{cleanup();reject(new Error('เชื่อมต่อ Google Apps Script ไม่สำเร็จ กรุณาตรวจสอบ URL และการ Deploy'))},15000);
+  function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}
+  window[cb]=data=>{cleanup();resolve(data)};
+  script.onerror=()=>{cleanup();reject(new Error('เรียก API ไม่สำเร็จ กรุณาตรวจสอบ URL /exec และสิทธิ์การเข้าถึง'))};
+  const query=new URLSearchParams({...params,callback:cb,_:Date.now()});
+  script.src=API_URL+'?'+query.toString();document.body.appendChild(script);
+ });
+}
+async function postData(payload){
+ ensureApi();
+ // text/plain avoids a CORS preflight. The response is opaque by design;
+ // after a write, the UI checks the server state using a JSONP read request.
+ await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+}
+function formatDate(value){if(!value)return '-';const d=new Date(value);if(isNaN(d))return value;return new Intl.DateTimeFormat('th-TH-u-ca-buddhist',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)}
+function showApp(){ $('login').classList.add('hidden');$('app').classList.remove('hidden') }
+function showLogin(){ $('app').classList.add('hidden');$('login').classList.remove('hidden') }
+async function login(e){
+ e.preventDefault();const btn=$('loginBtn');btn.disabled=true;btn.textContent='กำลังตรวจสอบ...';$('loginError').classList.add('hidden');
+ try{
+  ensureApi();
+  // POST keeps the password out of the URL. no-cors cannot expose the response, so use a client-generated token and verify it.
+  const proposedToken='m_'+Date.now()+'_'+Math.random().toString(36).slice(2)+'_'+Math.random().toString(36).slice(2);
+  await postData({action:'login',username:$('username').value.trim(),password:$('password').value,clientToken:proposedToken});
+  await new Promise(r=>setTimeout(r,700));
+  const check=await jsonp({action:'session',token:proposedToken});
+  if(!check.success)throw new Error('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+  token=proposedToken;sessionStorage.setItem('museumToken',token);$('password').value='';showApp();await loadRows();
+ }catch(err){$('loginError').textContent=err.message;$('loginError').classList.remove('hidden')}
+ finally{btn.disabled=false;btn.textContent='ยืนยันตัวตน'}
+}
+async function loadRows(){
+ $('loading').textContent='กำลังโหลดข้อมูล...';
+ try{
+  const result=await jsonp({action:'list',token});
+  if(!result.success)throw new Error(result.message||'โหลดข้อมูลไม่สำเร็จ');
+  allRows=result.data||[];shownRows=[...allRows];render(shownRows);
+ }catch(err){notify(err.message,true);if((err.message||'').includes('เซสชันหมดอายุ'))logout()}
+ finally{$('loading').textContent=''}
+}
+function render(data){
+ $('count').textContent=data.length+' รายการ';$('rows').replaceChildren();
+ if(!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=4;td.className='py-8 text-center text-gray-400';td.textContent='ไม่พบข้อมูล';tr.appendChild(td);$('rows').appendChild(tr);return}
+ data.forEach(r=>{const tr=document.createElement('tr');[formatDate(r.visitDateTime),r.groupName,r.visitorCount,r.packageType].forEach((v,i)=>{const td=document.createElement('td');td.className='p-3';td.textContent=v??'-';if(i===2)td.classList.add('text-center');tr.appendChild(td)});$('rows').appendChild(tr)})
+}
+function filterRows(){
+ const a=$('startDate').value,b=$('endDate').value;if(!a||!b)return notify('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด',true);if(a>b)return notify('วันที่เริ่มต้นต้องไม่อยู่หลังวันที่สิ้นสุด',true);
+ shownRows=allRows.filter(r=>{const d=new Date(r.visitDateTime);if(isNaN(d))return false;const key=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');return key>=a&&key<=b});render(shownRows)
+}
+async function saveVisit(e){
+ e.preventDefault();const btn=$('saveBtn');btn.disabled=true;btn.textContent='กำลังบันทึก...';
+ try{
+  ensureApi();
+  // no-cors POST cannot expose the server response; verify the new row appears in a subsequent read.
+  const before = allRows.length;
+  await postData({action:'save',token,groupName:$('groupName').value.trim(),visitorCount:$('visitorCount').value,visitDateTime:$('visitDateTime').value,packageType:$('packageType').value});
+  let saved = false;
+  for (let attempt=0; attempt<5; attempt++) {
+    await new Promise(r=>setTimeout(r,700));
+    const result = await jsonp({action:'list',token});
+    if (!result.success) throw new Error(result.message || 'ตรวจสอบผลการบันทึกไม่สำเร็จ');
+    allRows = result.data || [];
+    if (allRows.length > before) { saved = true; break; }
   }
-  function setBusy(button, busy, label) {
-    button.disabled = busy; button.textContent = busy ? label : button.dataset.original;
-    button.classList.toggle('opacity-60', busy); button.classList.toggle('cursor-not-allowed', busy);
-  } 
-  function callServer(method, ...args) {
-    return new Promise((resolve, reject) => {
-      if (!google || !google.script || !google.script.run) {
-        reject(new Error('กรุณาเปิดระบบผ่าน URL ของ Google Apps Script Web App'));
-        return;
-      }
-      google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(new Error(err.message || String(err))))[method](...args);
-    });
-  }
-  function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function parseDate(value) {
-    if (!value) return null;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  function formatThaiDate(value) {
-    const d = parseDate(value); if (!d) return value || '-';
-    return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
-      day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false
-    }).format(d);
-  }
-  function showApp() {
-    $('loginOverlay').classList.add('hidden');
-    $('mainContent').classList.remove('hidden');
-  }
-  async function login(event) {
-    event.preventDefault();
-    const btn = $('loginBtn'); btn.dataset.original = 'ยืนยันตัวตน';
-    setBusy(btn, true, 'กำลังตรวจสอบ...');
-    $('loginError').classList.add('hidden');
-    try {
-      const result = await callServer('checkLogin', $('userInput').value.trim(), $('passInput').value);
-      if (!result || !result.success) throw new Error(result?.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-      authToken = result.token; sessionStorage.setItem('museumToken', authToken);
-      showApp(); await fetchData(); $('passInput').value = '';
-    } catch (err) {
-      $('loginError').textContent = err.message || 'เข้าสู่ระบบไม่สำเร็จ';
-      $('loginError').classList.remove('hidden');
-    } finally { setBusy(btn, false, ''); }
-  }
-  async function fetchData() {
-    $('loadingText').textContent = 'กำลังโหลดข้อมูล...';
-    try {
-      allData = await callServer('getVisits', authToken);
-      visibleData = [...allData]; renderTable(visibleData);
-    } catch (err) {
-      if ((err.message || '').includes('เซสชันหมดอายุ')) logout(false);
-      toast(err.message || 'โหลดข้อมูลไม่สำเร็จ', 'error');
-    } finally { $('loadingText').textContent = ''; }
-  }
-  function renderTable(rows) {
-    const tbody = $('tableBody'); tbody.replaceChildren();
-    $('recordCount').textContent = `${rows.length} รายการ`;
-    if (!rows.length) {
-      const tr = document.createElement('tr'); const td = document.createElement('td');
-      td.colSpan = 4; td.className = 'text-center py-10 text-gray-400'; td.textContent = 'ไม่พบข้อมูล';
-      tr.appendChild(td); tbody.appendChild(tr); return;
-    }
-    rows.forEach(row => {
-      const tr = document.createElement('tr'); tr.className = 'hover:bg-purple-50';
-      [formatThaiDate(row.visitDateTime), row.groupName, row.visitorCount, row.packageType].forEach((value, index) => {
-        const td = document.createElement('td'); td.className = 'p-3';
-        if (index === 2) td.classList.add('text-center');
-        if (index === 1) td.classList.add('font-bold','text-purple-700');
-        td.textContent = value ?? '-'; tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-  }
-  function filterData() {
-    const start = $('startDate').value, end = $('endDate').value;
-    if (!start || !end) return toast('กรุณาระบุวันที่เริ่มต้นและสิ้นสุด', 'error');
-    if (start > end) return toast('วันที่เริ่มต้นต้องไม่อยู่หลังวันที่สิ้นสุด', 'error');
-    visibleData = allData.filter(row => {
-      const d = parseDate(row.visitDateTime); if (!d) return false;
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return key >= start && key <= end;
-    });
-    renderTable(visibleData);
-  }
-  async function saveForm(event) {
-    event.preventDefault();
-    const btn = $('submitBtn'); btn.dataset.original = 'บันทึกข้อมูล';
-    setBusy(btn, true, 'กำลังบันทึก...');
-    const payload = {
-      groupName: $('groupName').value.trim(),
-      visitorCount: $('visitorCount').value,
-      visitDateTime: $('visitDateTime').value,
-      packageType: $('packageType').value
-    };
-    try {
-      const result = await callServer('saveVisit', authToken, payload);
-      $('museumForm').reset(); toast(result.message || 'บันทึกข้อมูลสำเร็จ');
-      await fetchData();
-    } catch (err) { toast(err.message || 'บันทึกข้อมูลไม่สำเร็จ', 'error'); }
-    finally { setBusy(btn, false, ''); }
-  }
-  function logout(reload=true) {
-    authToken = ''; sessionStorage.removeItem('museumToken');
-    $('mainContent').classList.add('hidden'); $('loginOverlay').classList.remove('hidden');
-    if (reload) $('passInput').value = '';
-  }
-
-  $('loginForm').addEventListener('submit', login);
-  $('museumForm').addEventListener('submit', saveForm);
-  $('filterBtn').addEventListener('click', filterData);
-  $('allBtn').addEventListener('click', () => { visibleData = [...allData]; renderTable(visibleData); });
-  $('printBtn').addEventListener('click', () => window.print());
-  $('logoutBtn').addEventListener('click', () => logout());
-
-  window.addEventListener('load', async () => {
-    if (authToken) {
-      showApp();
-      await fetchData();
-      if (!authToken) return;
-    }
-  });
+  if (!saved) throw new Error('ยังไม่พบข้อมูลใหม่ในชีต กรุณาตรวจสอบ Apps Script Executions และสิทธิ์ฐานข้อมูล');
+  shownRows=[...allRows];render(shownRows);
+  $('visitForm').reset();notify('บันทึกข้อมูลสำเร็จ');
+ }catch(err){notify(err.message,true)}
+ finally{btn.disabled=false;btn.textContent='บันทึกข้อมูล'}
+}
+async function logout(){
+  const oldToken=token;
+  token='';sessionStorage.removeItem('museumToken');showLogin();
+  if(oldToken){try{await postData({action:'logout',token:oldToken})}catch(e){}}
+}
+$('loginForm').addEventListener('submit',login);
+$('visitForm').addEventListener('submit',saveVisit);
+$('filterBtn').addEventListener('click',filterRows);
+$('allBtn').addEventListener('click',()=>{shownRows=[...allRows];render(shownRows)});
+$('printBtn').addEventListener('click',()=>window.print());
+$('logoutBtn').addEventListener('click',logout);
 </script>
 </body>
 </html>
